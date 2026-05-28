@@ -4,3 +4,5 @@ parts/
 .idea/
 *.gor
 !sample.gor
+!min.gor
+!real.gor
