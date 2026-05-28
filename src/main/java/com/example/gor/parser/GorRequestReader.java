@@ -1,7 +1,9 @@
 package com.example.gor.parser;
 
-import java.io.BufferedReader;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PushbackInputStream;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -17,7 +19,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class GorRequestReader {
-    // 老版本 GoReplay 使用这个三猴子字符串分隔每条消息；sample.gor 保留该真实历史格式。
+    // GoReplay .gor 文件使用该 payload 分隔符分隔每条消息。
     public static final String DELIMITER = "🐵🙈🙉";
 
     /**
@@ -31,16 +33,23 @@ public class GorRequestReader {
      */
     public void readRequests(Path input, Consumer<GorRecord> consumer) throws IOException {
         long requestNo = 0;
-        StringBuilder current = new StringBuilder();
-        try (BufferedReader reader = Files.newBufferedReader(input, StandardCharsets.UTF_8)) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (line.equals(DELIMITER)) {
-                    // 读到分隔符才提交上一条请求，保证 rawText 保留完整 GoReplay 消息。
-                    requestNo = emitIfRequest(current, requestNo, consumer);
-                    current.setLength(0);
+        byte[] delimiter = DELIMITER.getBytes(StandardCharsets.UTF_8);
+        ByteArrayOutputStream current = new ByteArrayOutputStream();
+        try (PushbackInputStream inputStream = new PushbackInputStream(new BufferedInputStream(Files.newInputStream(input)), 1)) {
+            int matched = 0;
+            int nextByte;
+            while ((nextByte = inputStream.read()) != -1) {
+                current.write(nextByte);
+                if (nextByte == Byte.toUnsignedInt(delimiter[matched])) {
+                    matched++;
+                    if (matched == delimiter.length) {
+                        appendTrailingLineBreakIfPresent(inputStream, current);
+                        requestNo = emitIfRequest(current, requestNo, consumer);
+                        current.reset();
+                        matched = 0;
+                    }
                 } else {
-                    current.append(line).append(System.lineSeparator());
+                    matched = nextByte == Byte.toUnsignedInt(delimiter[0]) ? 1 : 0;
                 }
             }
         }
@@ -48,15 +57,47 @@ public class GorRequestReader {
     }
 
     /**
-     * 校验当前缓存是否是一条请求记录；如果是，则补回分隔符并提交给 consumer。
+     * 如果分隔符后面紧跟换行符，则把换行符保留在当前 raw record 中。
+     *
+     * <p>GoReplay 文本通常是一行三猴子分隔符后换行再进入下一条记录。这里不使用 readLine，
+     * 而是按字节判断并保留原始的 LF 或 CRLF，避免导出时改变文件换行格式。</p>
+     *
+     * @param inputStream 支持回退 1 字节的输入流
+     * @param current     当前请求原始字节缓存
+     * @throws IOException 读取文件失败时抛出
+     */
+    private void appendTrailingLineBreakIfPresent(PushbackInputStream inputStream, ByteArrayOutputStream current) throws IOException {
+        int nextByte = inputStream.read();
+        if (nextByte == -1) {
+            return;
+        }
+        if (nextByte == '\n') {
+            current.write(nextByte);
+            return;
+        }
+        if (nextByte == '\r') {
+            current.write(nextByte);
+            int maybeLineFeed = inputStream.read();
+            if (maybeLineFeed == '\n') {
+                current.write(maybeLineFeed);
+            } else if (maybeLineFeed != -1) {
+                inputStream.unread(maybeLineFeed);
+            }
+            return;
+        }
+        inputStream.unread(nextByte);
+    }
+
+    /**
+     * 校验当前缓存是否是一条请求记录；如果是，则按原始文本提交给 consumer。
      *
      * @param current   当前读取到但尚未提交的一段原始文本
      * @param requestNo 已提交的请求数量
      * @param consumer  请求记录处理函数
      * @return 最新的请求数量
      */
-    private long emitIfRequest(StringBuilder current, long requestNo, Consumer<GorRecord> consumer) {
-        String raw = current.toString();
+    private long emitIfRequest(ByteArrayOutputStream current, long requestNo, Consumer<GorRecord> consumer) {
+        String raw = current.toString(StandardCharsets.UTF_8);
         if (raw.isBlank()) {
             return requestNo;
         }
@@ -65,7 +106,7 @@ public class GorRequestReader {
         }
         long nextNo = requestNo + 1;
         try {
-            consumer.accept(new GorRecord(nextNo, raw + DELIMITER + System.lineSeparator()));
+            consumer.accept(new GorRecord(nextNo, raw));
         } catch (UncheckedIOException e) {
             throw e;
         }

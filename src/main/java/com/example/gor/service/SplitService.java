@@ -41,6 +41,7 @@ public class SplitService {
         if (maxCount <= 0) {
             throw new IllegalArgumentException("--max-count must be greater than 0");
         }
+        validateInputFile(input);
         Files.createDirectories(outputDir);
         SplitWriter writer = new SplitWriter(outputDir);
         try {
@@ -76,6 +77,7 @@ public class SplitService {
         if (maxSizeMb <= 0) {
             throw new IllegalArgumentException("--max-size-mb must be greater than 0");
         }
+        validateInputFile(input);
         Files.createDirectories(outputDir);
         long maxBytes = maxSizeMb * 1024 * 1024;
         SplitWriter writer = new SplitWriter(outputDir);
@@ -94,6 +96,23 @@ public class SplitService {
                 throw ioException;
             }
             throw e;
+        }
+    }
+
+    /**
+     * 校验拆分输入路径必须是一个已存在的普通文件。
+     *
+     * <p>这里提前抛出业务可读的异常，避免底层 Files.newBufferedReader 抛出的
+     * NoSuchFileException 只显示文件名，导致 CLI 用户无法判断失败原因。</p>
+     *
+     * @param input 用户通过 --input 传入的 .gor 文件路径
+     */
+    private void validateInputFile(Path input) {
+        if (!Files.exists(input)) {
+            throw new IllegalArgumentException("input file does not exist: " + input);
+        }
+        if (!Files.isRegularFile(input)) {
+            throw new IllegalArgumentException("input path is not a file: " + input);
         }
     }
 

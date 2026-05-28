@@ -8,4 +8,6 @@ if [[ -f "$JAR" ]]; then
   exec java -jar "$JAR" "$@"
 fi
 
-exec mvn -q -f "$APP_DIR/pom.xml" spring-boot:run -Dspring-boot.run.arguments="$*"
+echo "Jar not found, building target jar first..." >&2
+mvn -q -f "$APP_DIR/pom.xml" -DskipTests package
+exec java -jar "$JAR" "$@"

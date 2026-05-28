@@ -24,6 +24,11 @@ public class TrafficClassifier {
      * @return 分类结果，包含主分类、所有命中标签和风险等级
      */
     public ClassificationResult classify(ParsedHttpRequest request) {
+        String requestTargetText = String.join("\n",
+                safe(request.path()),
+                safe(request.query()),
+                safe(request.body())
+        ).toLowerCase(Locale.ROOT);
         String rawText = String.join("\n",
                 safe(request.path()),
                 safe(request.query()),
@@ -36,7 +41,7 @@ public class TrafficClassifier {
         List<String> tags = new ArrayList<>();
         addIf(tags, safe(request.path()).toLowerCase(Locale.ROOT)
                 .matches(".*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|map)$"), "static_resource");
-        addIf(tags, containsAny(text, "login", "auth", "sso", "token", "oauth"), "login");
+        addIf(tags, containsAny(requestTargetText + "\n" + urlDecode(requestTargetText), "login", "auth", "sso", "token", "oauth"), "login");
         addIf(tags, containsAny(text, "upload", "import", "file"), "upload");
         addIf(tags, containsAny(text, "download", "export"), "download");
         addIf(tags, containsAny(text, "union select", "or 1=1", "sleep(", "benchmark("), "sql_injection");

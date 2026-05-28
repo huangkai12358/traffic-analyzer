@@ -114,7 +114,7 @@ public interface TrafficRequestMapper {
      * <p>当前只在测试中使用，避免测试用例之间数据互相污染。</p>
      */
     @Delete("DELETE FROM traffic_request")
-    void deleteAll();
+    int deleteAll();
 
     /**
      * 聚合查询返回行。

@@ -6,7 +6,7 @@ import picocli.CommandLine.Command;
 /**
  * CLI 根命令。
  *
- * <p>根命令只负责注册子命令和展示帮助入口；实际业务由 import、stats、export、split 子命令完成。</p>
+ * <p>根命令只负责注册子命令和展示帮助入口；实际业务由 import、clear、stats、export、split 子命令完成。</p>
  */
 @Component
 @Command(
@@ -15,6 +15,7 @@ import picocli.CommandLine.Command;
         description = "GoReplay .gor traffic processing CLI",
         subcommands = {
                 ImportCommand.class,
+                ClearCommand.class,
                 StatsCommand.class,
                 ExportCommand.class,
                 SplitCommand.class

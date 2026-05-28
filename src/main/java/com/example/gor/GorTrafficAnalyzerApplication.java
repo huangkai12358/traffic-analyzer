@@ -1,6 +1,10 @@
 package com.example.gor;
 
+import com.example.gor.cli.SplitCommand;
 import com.example.gor.cli.GorCommand;
+import com.example.gor.parser.GorRequestReader;
+import com.example.gor.service.SplitService;
+import java.util.Arrays;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -38,7 +42,38 @@ public class GorTrafficAnalyzerApplication implements CommandLineRunner {
      * @param args 用户输入的 CLI 参数
      */
     public static void main(String[] args) {
+        if (isSplitCommand(args)) {
+            System.exit(runSplitWithoutSpring(args));
+        }
         System.exit(SpringApplication.exit(SpringApplication.run(GorTrafficAnalyzerApplication.class, args)));
+    }
+
+    /**
+     * 判断当前命令是否为 split。
+     *
+     * <p>split 只需要读取和写入本地 .gor 文件，不需要数据库、MyBatis 或 Spring 上下文。
+     * 在 main 方法里提前识别它，可以避免 MySQL 不可用时影响纯文件拆分功能。</p>
+     *
+     * @param args 用户输入的 CLI 参数
+     * @return true 表示当前要执行 split 子命令
+     */
+    private static boolean isSplitCommand(String[] args) {
+        return args.length > 0 && "split".equals(args[0]);
+    }
+
+    /**
+     * 不启动 Spring Boot，直接执行 split 子命令。
+     *
+     * <p>这里手动组装 SplitCommand、SplitService 和 GorRequestReader。它们都没有数据库依赖，
+     * 因此可以在输入文件不存在、MySQL 未启动、环境变量未配置等情况下仍给出干净的 CLI 错误。</p>
+     *
+     * @param args 用户输入的完整 CLI 参数，第一项是 split
+     * @return Picocli 命令退出码，0 表示成功
+     */
+    private static int runSplitWithoutSpring(String[] args) {
+        String[] splitArgs = Arrays.copyOfRange(args, 1, args.length);
+        SplitCommand splitCommand = new SplitCommand(new SplitService(new GorRequestReader()));
+        return new CommandLine(splitCommand).execute(splitArgs);
     }
 
     /**

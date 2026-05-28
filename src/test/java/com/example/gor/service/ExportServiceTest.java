@@ -4,10 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.gor.entity.RiskLevel;
 import com.example.gor.entity.TrafficRequest;
+import com.example.gor.fixtures.RealGorSamples;
 import com.example.gor.mapper.TrafficRequestMapper;
+import com.example.gor.parser.GorRecord;
+import com.example.gor.parser.GorRequestReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,14 +30,23 @@ class ExportServiceTest {
     @Test
     void exportsByCategoryUsingRawGorText() throws Exception {
         trafficRequestMapper.deleteAll();
-        trafficRequestMapper.insert(request("login", "1 1 0\nGET /login HTTP/1.1\nHost: example.com\n\n🐵🙈🙉\n"));
-        trafficRequestMapper.insert(request("api", "1 2 0\nGET /api/users HTTP/1.1\nHost: example.com\n\n🐵🙈🙉\n"));
+        List<GorRecord> records = realRecords();
+        trafficRequestMapper.insert(request("login", records.get(0).rawText()));
+        trafficRequestMapper.insert(request("api", records.get(1).rawText()));
         Path output = Files.createTempFile("login", ".gor");
 
         long count = exportService.exportByCategory("login", output);
 
         assertThat(count).isEqualTo(1);
-        assertThat(Files.readString(output)).contains("GET /login").doesNotContain("/api/users");
+        assertThat(Files.readString(output)).contains("/api/auth/login").doesNotContain("/api/users/page");
+    }
+
+    private List<GorRecord> realRecords() throws Exception {
+        Path input = Files.createTempFile("real-sample", ".gor");
+        Files.writeString(input, RealGorSamples.AUTH_AND_USER_API);
+        List<GorRecord> records = new ArrayList<>();
+        new GorRequestReader().readRequests(input, records::add);
+        return records;
     }
 
     private TrafficRequest request(String category, String raw) {
