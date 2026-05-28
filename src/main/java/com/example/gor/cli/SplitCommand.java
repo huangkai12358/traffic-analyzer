@@ -17,16 +17,12 @@ import picocli.CommandLine.Option;
 public class SplitCommand implements Callable<Integer> {
     private final SplitService splitService;
 
-    @Option(names = "--input", required = true, description = "Input .gor file")
     private Path input;
 
-    @Option(names = "--max-count", description = "Maximum requests per output file")
     private Long maxCount;
 
-    @Option(names = "--max-size-mb", description = "Maximum size in MiB per output file")
     private Long maxSizeMb;
 
-    @Option(names = "--output-dir", required = true, description = "Output directory")
     private Path outputDir;
 
     /**
@@ -36,6 +32,46 @@ public class SplitCommand implements Callable<Integer> {
      */
     public SplitCommand(SplitService splitService) {
         this.splitService = splitService;
+    }
+
+    /**
+     * 接收待拆分的输入文件路径。
+     *
+     * @param input 输入 .gor 文件
+     */
+    @Option(names = "--input", required = true, description = "Input .gor file")
+    void setInput(Path input) {
+        this.input = input;
+    }
+
+    /**
+     * 接收按请求数量拆分的阈值。
+     *
+     * @param maxCount 每个 part 文件最多请求数
+     */
+    @Option(names = "--max-count", description = "Maximum requests per output file")
+    void setMaxCount(Long maxCount) {
+        this.maxCount = maxCount;
+    }
+
+    /**
+     * 接收按文件大小拆分的阈值。
+     *
+     * @param maxSizeMb 每个 part 文件最大 MiB 数
+     */
+    @Option(names = "--max-size-mb", description = "Maximum size in MiB per output file")
+    void setMaxSizeMb(Long maxSizeMb) {
+        this.maxSizeMb = maxSizeMb;
+    }
+
+    /**
+     * 接收拆分结果输出目录。
+     *
+     * @param outputDir 输出目录
+     */
+    @Option(names = "--output-dir", required = true, description = "Output directory")
+    void setOutputDir(Path outputDir) {
+        this.outputDir = outputDir;
     }
 
     /**

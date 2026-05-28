@@ -17,7 +17,6 @@ import picocli.CommandLine.Parameters;
 public class ImportCommand implements Callable<Integer> {
     private final ImportService importService;
 
-    @Parameters(index = "0", description = "Input .gor file")
     private Path input;
 
     /**
@@ -27,6 +26,18 @@ public class ImportCommand implements Callable<Integer> {
      */
     public ImportCommand(ImportService importService) {
         this.importService = importService;
+    }
+
+    /**
+     * 接收 import 命令的位置参数。
+     *
+     * <p>Picocli 会在命令执行前调用该方法注入用户输入的文件路径。</p>
+     *
+     * @param input 输入 .gor 文件路径
+     */
+    @Parameters(index = "0", description = "Input .gor file")
+    void setInput(Path input) {
+        this.input = input;
     }
 
     /**

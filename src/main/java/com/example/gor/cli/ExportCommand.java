@@ -17,13 +17,10 @@ import picocli.CommandLine.Option;
 public class ExportCommand implements Callable<Integer> {
     private final ExportService exportService;
 
-    @Option(names = "--category", description = "Category to export")
     private String category;
 
-    @Option(names = "--risk", description = "Risk level to export: low, medium, high")
     private String risk;
 
-    @Option(names = "--output", required = true, description = "Output .gor file")
     private Path output;
 
     /**
@@ -33,6 +30,36 @@ public class ExportCommand implements Callable<Integer> {
      */
     public ExportCommand(ExportService exportService) {
         this.exportService = exportService;
+    }
+
+    /**
+     * 接收按分类导出的过滤条件。
+     *
+     * @param category 要导出的主分类
+     */
+    @Option(names = "--category", description = "Category to export")
+    void setCategory(String category) {
+        this.category = category;
+    }
+
+    /**
+     * 接收按风险导出的过滤条件。
+     *
+     * @param risk 风险等级，例如 low、medium、high
+     */
+    @Option(names = "--risk", description = "Risk level to export: low, medium, high")
+    void setRisk(String risk) {
+        this.risk = risk;
+    }
+
+    /**
+     * 接收导出文件路径。
+     *
+     * @param output 输出 .gor 文件
+     */
+    @Option(names = "--output", required = true, description = "Output .gor file")
+    void setOutput(Path output) {
+        this.output = output;
     }
 
     /**
