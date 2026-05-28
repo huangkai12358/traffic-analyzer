@@ -30,7 +30,10 @@ export DB_PASSWORD=你的数据库密码
 推荐使用项目根目录下的短命令脚本：
 
 ```bash
-./gor import sample.gor
+./gor import sample.gor --clear
+./gor import a.gor b.gor --clear
+./gor import --dir ./captures --clear
+./gor clear
 ./gor stats
 ./gor export --category login --output login.gor
 ./gor export --risk high --output high-risk.gor
@@ -48,7 +51,10 @@ gor stats
 底层仍然支持 Maven 方式：
 
 ```bash
-mvn spring-boot:run -Dspring-boot.run.arguments="import sample.gor"
+mvn spring-boot:run -Dspring-boot.run.arguments="import sample.gor --clear"
+mvn spring-boot:run -Dspring-boot.run.arguments="import a.gor b.gor --clear"
+mvn spring-boot:run -Dspring-boot.run.arguments="import --dir ./captures --clear"
+mvn spring-boot:run -Dspring-boot.run.arguments="clear"
 mvn spring-boot:run -Dspring-boot.run.arguments="stats"
 mvn spring-boot:run -Dspring-boot.run.arguments="export --category login --output login.gor"
 mvn spring-boot:run -Dspring-boot.run.arguments="export --risk high --output high-risk.gor"
@@ -63,6 +69,26 @@ mvn package
 java -jar target/traffic-analyzer-0.0.1-SNAPSHOT.jar import sample.gor
 ```
 
+推荐每次处理新文件时使用：
+
+```bash
+./gor import input.gor --clear
+```
+
+这样会先清空之前导入的请求，避免 `stats` 和 `export` 混入历史数据。
+
+批量导入多个文件：
+
+```bash
+./gor import a.gor b.gor c.gor --clear
+```
+
+导入目录下所有 `.gor` 文件：
+
+```bash
+./gor import --dir ./captures --clear
+```
+
 ## 数据表
 
 核心表：`traffic_request`
@@ -73,7 +99,7 @@ java -jar target/traffic-analyzer-0.0.1-SNAPSHOT.jar import sample.gor
 
 ## sample.gor 里的三猴子分隔符
 
-`🐵🙈🙉` 是老版本 GoReplay `.gor` 文件使用过的 payload 分隔符。当前 GoReplay 源码中的分隔符已经改为空行 `\n\n`，因此不同版本生成的 `.gor` 文件可能不同。本 MVP 先支持三猴子分隔符样例；后续可以把解析器扩展为同时兼容新版空行分隔格式。
+`🐵🙈🙉` 是 GoReplay `.gor` 文件中用于分隔 payload 的标记。本工具按该分隔符流式切分请求，并保存每条请求的 `raw_gor_text`，导出和拆分时直接写回原始文本。
 
 ## 分类
 

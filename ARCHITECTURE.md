@@ -54,6 +54,7 @@ main()
 
 ```text
 import
+clear
 stats
 export
 split
@@ -63,6 +64,18 @@ split
 
 ```bash
 ./gor import sample.gor
+```
+
+也支持一次导入多个文件：
+
+```bash
+./gor import a.gor b.gor c.gor --clear
+```
+
+或导入目录下所有 `.gor` 文件：
+
+```bash
+./gor import --dir ./captures --clear
 ```
 
 实际调用链是：
@@ -86,7 +99,7 @@ GorTrafficAnalyzerApplication
 
 ```text
 ImportCommand
-  -> ImportService.importFile()
+  -> ImportService.importFile() / importFiles() / importDirectory()
     -> GorRequestReader.readRequests()
     -> GorHttpParser.parse()
     -> TrafficClassifier.classify()
@@ -231,6 +244,32 @@ raw_gor_text
 ```
 
 因为导出时不能用解析后的字段重新拼 HTTP 请求，否则可能破坏 GoReplay 回放格式。
+
+## 统计功能
+
+## 清空功能
+
+命令：
+
+```bash
+./gor clear
+```
+
+调用链：
+
+```text
+ClearCommand
+  -> ClearService.clearRequests()
+    -> TrafficRequestMapper.deleteAll()
+```
+
+该命令用于清空 `traffic_request` 表，适合在处理新 `.gor` 文件前执行。`import` 命令也支持 `--clear` 参数：
+
+```bash
+./gor import input.gor --clear
+```
+
+它会在同一导入流程中先清空旧数据，再导入当前文件。
 
 ## 统计功能
 
