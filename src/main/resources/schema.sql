@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS traffic_request (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    source_file VARCHAR(1024) NOT NULL,
+    request_no BIGINT NOT NULL,
+    method VARCHAR(16),
+    host VARCHAR(512),
+    url VARCHAR(2048),
+    path VARCHAR(512),
+    query_string VARCHAR(2048),
+    headers_json LONGTEXT,
+    body LONGTEXT,
+    raw_gor_text LONGTEXT NOT NULL,
+    category VARCHAR(64),
+    tags VARCHAR(512),
+    risk_level VARCHAR(16),
+    created_at TIMESTAMP NOT NULL,
+    content_type VARCHAR(255),
+    user_agent VARCHAR(1024),
+    INDEX idx_traffic_category (category),
+    INDEX idx_traffic_risk (risk_level),
+    INDEX idx_traffic_host (host),
+    INDEX idx_traffic_path (path)
+);

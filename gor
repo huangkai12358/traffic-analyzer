@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+JAR="$APP_DIR/target/traffic-analyzer-0.0.1-SNAPSHOT.jar"
+
+if [[ -f "$JAR" ]]; then
+  exec java -jar "$JAR" "$@"
+fi
+
+exec mvn -q -f "$APP_DIR/pom.xml" spring-boot:run -Dspring-boot.run.arguments="$*"
