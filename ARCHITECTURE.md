@@ -50,7 +50,7 @@ main()
   -> new CommandLine(GorCommand).execute(args)
 ```
 
-`GorCommand` 是根命令，注册了 4 个子命令：
+`GorCommand` 是根命令，注册了 5 个子命令：
 
 ```text
 import
@@ -58,6 +58,17 @@ clear
 stats
 export
 split
+```
+
+其中 `split` 是一个例外：它只做本地文件拆分，不需要数据库。为了避免 MySQL 未启动时影响拆分命令，入口会在启动 Spring Boot 前识别 `split`，并直接组装 `SplitCommand`、`SplitService`、`GorRequestReader` 执行：
+
+```text
+main()
+  -> 判断 args[0] == "split"
+  -> runSplitWithoutSpring()
+  -> SplitCommand
+  -> SplitService
+  -> GorRequestReader
 ```
 
 例如执行：
@@ -178,6 +189,23 @@ TrafficClassifier.java
 
 负责根据 path、query、headers、body 打标签和主分类。
 
+当前内置规则：
+
+| 分类 | 判断特征 |
+| --- | --- |
+| `static_resource` | `path` 以静态资源后缀结尾：`.js`、`.css`、`.png`、`.jpg`、`.jpeg`、`.gif`、`.svg`、`.ico`、`.woff`、`.woff2`、`.ttf`、`.map` |
+| `login` | `path`、`query` 或 `body` 包含：`login`、`auth`、`sso`、`token`、`oauth` |
+| `api` | `path` 以 `/api/` 开头，或者 `path` 不包含文件后缀；并且没有命中攻击类标签 |
+| `upload` | `path`、`query`、`headers` 或 `body` 包含：`upload`、`import`、`file` |
+| `download` | `path`、`query`、`headers` 或 `body` 包含：`download`、`export` |
+| `sql_injection` | `path`、`query`、`headers` 或 `body` 包含：`union select`、`or 1=1`、`sleep(`、`benchmark(` |
+| `xss` | `path`、`query`、`headers` 或 `body` 包含：`<script`、`onerror=`、`javascript:` |
+| `path_traversal` | `path`、`query`、`headers` 或 `body` 包含：`../`、`..\\`、`/etc/passwd` |
+| `command_injection` | `path`、`query`、`headers` 或 `body` 包含：`whoami`、独立的 `id`、`cmd=`、`bash`、`curl` |
+| `unknown` | 没有命中以上任何规则 |
+
+分类会同时检查原始文本和 URL 解码后的文本，所以 `union%20select` 这类编码后的 payload 也能命中。
+
 输出：
 
 ```text
@@ -245,8 +273,6 @@ raw_gor_text
 
 因为导出时不能用解析后的字段重新拼 HTTP 请求，否则可能破坏 GoReplay 回放格式。
 
-## 统计功能
-
 ## 清空功能
 
 命令：
@@ -297,7 +323,7 @@ StatsCommand
 StatsCommand.java
 ```
 
-负责把统计结果打印成终端文本。
+负责把统计结果打印成终端表格，包含总请求数、高风险请求占比、分类分布、Top Host 和 Top Path。
 
 ```text
 StatsService.java
@@ -424,7 +450,11 @@ JacksonConfig.java
 ```text
 GorRequestReaderTest      .gor 请求切分
 GorHttpParserTest         HTTP method/path/header/body 解析
+RealGorSampleTest         真实风格 .gor 样例解析、分类和拆分
 TrafficClassifierTest     分类规则
+StatsCommandTest          stats 终端输出格式
+ClearServiceTest          清空已导入请求
+ImportServiceTest         单文件、批量文件和目录导入
 ExportServiceTest         按分类导出
 SplitServiceTest          按数量拆分
 ```

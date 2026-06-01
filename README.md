@@ -1,6 +1,6 @@
 # GoReplay .gor 流量处理工具
 
-Java 21 + Spring Boot 3 + Maven CLI/MVP，用于导入、解析、分类、统计和导出 GoReplay `.gor` 文件。
+Java 21 + Spring Boot 3 + Maven CLI/MVP，用于导入、解析、分类、统计、导出和拆分 GoReplay `.gor` 文件。
 
 ## 运行要求
 
@@ -97,6 +97,8 @@ java -jar target/traffic-analyzer-0.0.1-SNAPSHOT.jar import sample.gor
 
 导出使用 `raw_gor_text`，保证 GoReplay 原始文本尽量无损保留。
 
+详细数据库设计见 [DATABASE.md](DATABASE.md)。
+
 ## sample.gor 里的三猴子分隔符
 
 `🐵🙈🙉` 是 GoReplay `.gor` 文件中用于分隔 payload 的标记。本工具按该分隔符流式切分请求，并保存每条请求的 `raw_gor_text`，导出和拆分时直接写回原始文本。
@@ -115,6 +117,21 @@ java -jar target/traffic-analyzer-0.0.1-SNAPSHOT.jar import sample.gor
 - `path_traversal`
 - `command_injection`
 - `unknown`
+
+分类规则基于 `path`、`query`、`headers`、`body`，并会同时检查 URL 解码后的文本：
+
+| 分类 | 主要特征 |
+| --- | --- |
+| `static_resource` | 静态资源后缀：`.js`、`.css`、`.png`、`.jpg`、`.svg`、`.ico`、`.woff` 等 |
+| `login` | `login`、`auth`、`sso`、`token`、`oauth` |
+| `api` | `/api/` 开头，或 path 不像文件路径，且未命中攻击规则 |
+| `upload` | `upload`、`import`、`file` |
+| `download` | `download`、`export` |
+| `sql_injection` | `union select`、`or 1=1`、`sleep(`、`benchmark(` |
+| `xss` | `<script`、`onerror=`、`javascript:` |
+| `path_traversal` | `../`、`..\\`、`/etc/passwd` |
+| `command_injection` | `whoami`、独立 `id`、`cmd=`、`bash`、`curl` |
+| `unknown` | 没有命中以上规则 |
 
 ## 测试
 

@@ -14,7 +14,7 @@
 
 ## 支持的命令
 
-当前支持 4 个核心命令：
+当前支持 5 个核心命令：
 
 ```text
 import   导入 .gor 文件
@@ -124,6 +124,23 @@ command_injection
 unknown
 ```
 
+具体分类规则：
+
+| 分类 | 判断特征 |
+| --- | --- |
+| `static_resource` | `path` 以静态资源后缀结尾：`.js`、`.css`、`.png`、`.jpg`、`.jpeg`、`.gif`、`.svg`、`.ico`、`.woff`、`.woff2`、`.ttf`、`.map` |
+| `login` | `path`、`query` 或 `body` 包含认证相关关键词：`login`、`auth`、`sso`、`token`、`oauth`。这里不会因为 `Authorization` header 里有 token 就误判为登录 |
+| `api` | `path` 以 `/api/` 开头，或者 `path` 不包含文件后缀；并且没有命中攻击类标签 |
+| `upload` | `path`、`query`、`headers` 或 `body` 包含上传相关关键词：`upload`、`import`、`file` |
+| `download` | `path`、`query`、`headers` 或 `body` 包含下载相关关键词：`download`、`export` |
+| `sql_injection` | `path`、`query`、`headers` 或 `body` 包含 SQL 注入特征：`union select`、`or 1=1`、`sleep(`、`benchmark(` |
+| `xss` | `path`、`query`、`headers` 或 `body` 包含 XSS 特征：`<script`、`onerror=`、`javascript:` |
+| `path_traversal` | `path`、`query`、`headers` 或 `body` 包含路径穿越特征：`../`、`..\\`、`/etc/passwd` |
+| `command_injection` | `path`、`query`、`headers` 或 `body` 包含命令执行特征：`whoami`、独立的 `id`、`cmd=`、`bash`、`curl` |
+| `unknown` | 没有命中以上任何规则 |
+
+分类时会同时检查原始文本和 URL 解码后的文本，因此 `union%20select` 这类编码后的攻击特征也能被识别。
+
 一个请求只能有一个主分类 `category`，但可以有多个标签 `tags`。
 
 例如一个登录接口同时带有 SQL 注入特征，可能会得到：
@@ -153,30 +170,47 @@ command_injection
 
 功能：
 
-- 输出总请求数
-- 输出各分类数量
-- 输出疑似攻击数量
-- 输出 Top Host
-- 输出 Top Path
+- 输出总请求数和高风险请求占比
+- 输出分类分布表格
+- 输出 Top Host 表格
+- 输出 Top Path 表格
+- 每个聚合项都会显示数量和占比
 
 示例输出：
 
 ```text
-Total requests: 4
-By category:
-  login: 1
-  sql_injection: 1
-  static_resource: 1
-  upload: 1
-Suspicious attacks: 1
-Top Host:
-  example.com: 3
-  static.example.com: 1
-Top Path:
-  /api/login: 1
-  /api/search: 1
-  /api/upload: 1
-  /assets/app.js: 1
+GoReplay Traffic Statistics
+========================================
+Total Requests                   12
+High Risk Requests                5  (41.7%)
+
+Category Distribution
+----------------------------------------
+Category                        Count  Percent
+api                                 2    16.7%
+command_injection                   2    16.7%
+static_resource                     2    16.7%
+download                            1     8.3%
+login                               1     8.3%
+path_traversal                      1     8.3%
+sql_injection                       1     8.3%
+upload                              1     8.3%
+xss                                 1     8.3%
+
+Top Hosts
+----------------------------------------
+Host                            Count  Percent
+demo.example.com                   10    83.3%
+static.example.com                  2    16.7%
+
+Top Paths
+----------------------------------------
+Path                            Count  Percent
+/health                             1     8.3%
+/assets/logo.svg                    1     8.3%
+/assets/app.js                      1     8.3%
+/api/users/page                     1     8.3%
+/api/tools/ping                     1     8.3%
 ```
 
 ## 4. 按条件导出 .gor 文件
@@ -346,4 +380,3 @@ java -jar target/traffic-analyzer-0.0.1-SNAPSHOT.jar stats
 - 更多导出筛选条件，例如 host、path、method、时间范围
 - 更细粒度的风险等级
 - MySQL 集成测试
-- 支持更多 GoReplay 文件格式
